@@ -1,10 +1,10 @@
 metadata {
-        definition (name: "Lutron Virtual Dimmer", namespace: "njschwartz", author: "Nate Schwartz") {
-        capability "Switch"
-        capability "Refresh"
-        capability "Switch Level"
-        command "rampLevel"
-    }
+	definition (name: "Lutron Virtual Dimmer", namespace: "njschwartz", author: "Nate Schwartz") {	// rev 20180105 wjh
+		capability "Switch"
+		capability "Refresh"
+		capability "Switch Level"
+		command "rampLevel"
+	}
 
 	// simulator metadata
 	simulator {
@@ -22,9 +22,9 @@ metadata {
 		controlTile("levelSliderControl", "device.level", "slider", height: 1, width: 2, inactiveLabel: false, backgroundColor:"#ffe71e") {
 			state "level", action:"switch level.setLevel"
 		}
-        	valueTile("lValue", "device.level", inactiveLabel: true, height:1, width:1, decoration: "flat") {
+		valueTile("lValue", "device.level", inactiveLabel: true, height:1, width:1, decoration: "flat") {
 			state "levelValue", label:'${currentValue}%', unit:"", backgroundColor: "#53a7c0"
-        	}
+		}
 
 		main(["button"])
 		details(["button", "refresh","levelSliderControl","lValue"])
@@ -32,17 +32,16 @@ metadata {
 }
 
 def parse(description) {
-    sendEvent(name: description.name, value: description.value)
-
+	sendEvent(name: description.name, value: description.value)
 }
 
 def on() {
 	log.debug getDataValue("zone")
-    if (device.currentValue("level") > 0) {
+	if (device.currentValue("level") > 0) {
 		parent.setLevel(this, device.currentValue("level"))
-    } else { 
-    	parent.setLevel(this, 100)
-    }
+	} else {
+		parent.setLevel(this, 100)
+	}
 	sendEvent(name: "switch", value: "on")
 	log.info "Dimmer On"
 }
@@ -53,23 +52,29 @@ def off() {
 	log.info "Dimmer Off"
 }
 
-def setLevel(val) {
-	log.info "setLevel $val"
-    parent.setLevel(this, val)
-    
-	if (val < 0) val = 0
-	else if( val > 100) val = 100
-    
-	sendEvent(name: "level", value: val)
+def setLevel(level) {
+	level = limitedLevel(level)
+
+	parent.setLevel(this, level)
+	sendEvent(name: "level", value: level)
+	log.info "setLevel $level"
 }
 
-def rampLevel(level, userRampRate) {
-	parent.setLevel(this, level, userRampRate)
-    sendEvent(name: "level", value: level)
+def rampLevel(level, userRampSeconds) {
+	level = limitedLevel(level)
+
+	parent.setLevel(this, level, userRampSeconds)
+	sendEvent(name: "level", value: level)
 	sendEvent(name: "switch", value: "on")
 }
 
 def refresh() {
+	parent.refresh(this)
 	log.info "refresh"
-    parent.refresh(this)
+}
+
+def limitedLevel(level) {
+	if (level < 0) return 0
+	else if (level > 100) return 100
+	return level	
 }
